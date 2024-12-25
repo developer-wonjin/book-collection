@@ -3,6 +3,7 @@ package com.collection.book.example.controller;
 import com.collection.book.example.service.GoogleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,12 +21,14 @@ public class GoogleController {
 
     private final GoogleService googleService;
 
-    private static final String SPREADSHEET_ID = "스프레드 시트 URL 주소"; // 1. 기존에 스프레스 시트id를 복사해둔곳을 여기에 저장해둔다.
+    @Value("${spreadsheet.name}")
+    private String SPREADSHEET_ID; // 1. 기존에 스프레스 시트id를 복사해둔곳을 여기에 저장해둔다.
     private static final String RANGE = "A1"; // 2. 작성할 행을 입력
 
     @PostMapping("/write")
-    public ResponseEntity<String> writeToSheet(@RequestParam String word) {
+    public ResponseEntity<String> writeToSheet(@RequestParam("word") String word) {
         try {
+            log.info(word);
             // 3. 데이터를 스프레드시트에 쓰기 위해 전달되는 형식
             // 행과 열에 데이터를 매핑하기 위함
             List<List<Object>> values = List.of(Collections.singletonList(word));
