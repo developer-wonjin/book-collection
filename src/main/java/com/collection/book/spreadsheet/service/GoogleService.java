@@ -1,4 +1,4 @@
-package com.collection.book.example.service;
+package com.collection.book.spreadsheet.service;
 
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.json.JsonFactory;
@@ -39,18 +39,40 @@ public class GoogleService {
         return sheetsService;
     }
 
-    public void writeToSheet(String spreadsheetId, String range, List<List<Object>> values) {
+
+    public void writeToSheet(String spreadSheetId, String range, List<List<Object>> values) {
         try {
             Sheets service = getSheetsService();
             ValueRange body = new ValueRange().setValues(values);
             UpdateValuesResponse result = service.spreadsheets().values()
-                    .update(spreadsheetId, range, body)
+                    .update(spreadSheetId, range, body)
                     .setValueInputOption("USER_ENTERED")
                     .execute();
             log.info("Updated rows: {}", result.getUpdatedRows());
+            Thread.sleep(1000);
         } catch (Exception e) {
             log.error("Failed to write data to the spreadsheet", e);
             throw new RuntimeException("Failed to write data to the spreadsheet: " + e.getMessage(), e);
+        }
+    }
+
+    public List<List<Object>> readFromSheet(String spreadSheetId, String range) {
+        try {
+            Sheets service = getSheetsService(); // Sheets 서비스 객체 가져오기
+            ValueRange response = service.spreadsheets().values()
+                    .get(spreadSheetId, range)
+                    .execute();
+
+            List<List<Object>> values = response.getValues();
+            if (values == null || values.isEmpty()) {
+                log.info("No data found in the range: {}", range);
+            } else {
+                log.info("Data retrieved from range {}: {}", range, values);
+            }
+            return values;
+        } catch (Exception e) {
+            log.error("Failed to read data from the spreadsheet", e);
+            throw new RuntimeException("Failed to read data from the spreadsheet: " + e.getMessage(), e);
         }
     }
 }

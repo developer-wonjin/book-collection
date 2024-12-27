@@ -24,18 +24,29 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    compileOnly 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     runtimeOnly 'com.h2database:h2'
+
+    compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
     implementation 'com.google.apis:google-api-services-sheets:v4-rev516-1.23.0'
     implementation 'com.google.auth:google-auth-library-oauth2-http:0.20.0'
 
+    implementation 'com.squareup.okhttp3:okhttp:4.11.0'
+    implementation group: 'org.jsoup', name: 'jsoup', version: '1.18.3'
+
+
+    implementation 'org.springframework.boot:spring-boot-starter-quartz'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+
+
 }
 
 tasks.named('test') {
