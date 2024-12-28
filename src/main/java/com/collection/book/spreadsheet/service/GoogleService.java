@@ -1,19 +1,24 @@
 package com.collection.book.spreadsheet.service;
 
+import com.collection.book.spreadsheet.domain.UpdateArea;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.sheets.v4.Sheets;
-import com.google.api.services.sheets.v4.model.UpdateValuesResponse;
-import com.google.api.services.sheets.v4.model.ValueRange;
+import com.google.api.services.sheets.v4.model.*;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -59,9 +64,18 @@ public class GoogleService {
     public List<List<Object>> readFromSheet(String spreadSheetId, String range) {
         try {
             Sheets service = getSheetsService(); // Sheets 서비스 객체 가져오기
-            ValueRange response = service.spreadsheets().values()
-                    .get(spreadSheetId, range)
-                    .execute();
+
+//            // 스프레드시트 전체 데이터를 가져오기 (링크 포함)
+//            Spreadsheet response = service.spreadsheets()
+//                                        .get(spreadSheetId)
+//                                        .setRanges(List.of(range))
+//                                        .setFields("sheets(data(rowData(values(hyperlink,userEnteredValue))))") // 하이퍼링크 필드 요청
+//                                        .execute();
+
+            ValueRange response = service.spreadsheets()
+                                        .values()
+                                        .get(spreadSheetId, range)
+                                        .execute();
 
             List<List<Object>> values = response.getValues();
             if (values == null || values.isEmpty()) {
@@ -73,6 +87,32 @@ public class GoogleService {
         } catch (Exception e) {
             log.error("Failed to read data from the spreadsheet", e);
             throw new RuntimeException("Failed to read data from the spreadsheet: " + e.getMessage(), e);
+        }
+    }
+
+    public void writeBatchToSheet(String spreadsheetId, List<UpdateArea> updateAreaList) {
+        try {
+            Sheets service = getSheetsService(); // Sheets 서비스 객체 가져오기
+
+            // 요청 생성
+            List<Request> requests = new ArrayList<>();
+            for (UpdateArea updateArea : updateAreaList) {
+                requests.add(new Request()
+                                .setUpdateCells(new UpdateCellsRequest()
+                                                    .setRows(updateArea.getRowDataList())
+                                                    .setRange(updateArea.areaToGridRange())
+                                                    .setFields("userEnteredValue,hyperlink,userEnteredFormat"))
+                );
+            }
+
+            BatchUpdateSpreadsheetRequest body = new BatchUpdateSpreadsheetRequest().setRequests(requests);
+
+            // 요청 실행
+            service.spreadsheets(). batchUpdate(spreadsheetId, body).execute();
+            log.info("Batch write completed successfully.");
+        } catch (Exception e) {
+            log.error("Failed to write batch data to the spreadsheet", e);
+            throw new RuntimeException("Batch write failed: " + e.getMessage(), e);
         }
     }
 }
