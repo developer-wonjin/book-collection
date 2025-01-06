@@ -1,31 +1,26 @@
-package com.collection.book.util;
+package com.collection.book.example.service;
 
+import com.collection.book.util.HttpUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @Slf4j
-public class AladinApiUtil {
+@Service
+public class AladinService {
 
-
-    public static String getISBN(Map<String, String> hm, String booklistUrl)  {
-        StringBuffer sb = new StringBuffer();
-        for (String key : hm.keySet()) {
-            String val = hm.get(key);
-            sb.append(key).append("=").append(val).append("&");
-        }
-
-        log.info("목록API: {}", booklistUrl + sb);
-
+    @Cacheable(cacheNames = "getIsbn", key = "'book:isbn:' + #booklistUrl", cacheManager = "bookCacheManager")
+    public String getIsbn(String booklistUrl) {
         String responseStr = null;
         try {
-            responseStr = HttpUtil.get(booklistUrl + sb, null);
+            log.info("isbn api호출");
+            responseStr = HttpUtil.get(booklistUrl, null);
         } catch (IOException e) {
             log.error("e: {0}", e);
             throw new RuntimeException(e);
@@ -45,18 +40,12 @@ public class AladinApiUtil {
         return (String) book.get("isbn13");
     }
 
-    public static Map<String, Object> getDetail(Map<String, String> hm, String bookdetailUrl) {
-        StringBuffer sb = new StringBuffer();
-        for (String key : hm.keySet()) {
-            String val = hm.get(key);
-            sb.append(key).append("=").append(val).append("&");
-        }
-
-        log.info("상세정보API: {}", bookdetailUrl + sb);
-
+    @Cacheable(cacheNames = "getDetail", key = "'book:detail:' + #booklistUrl", cacheManager = "bookCacheManager")
+    public Map<String, Object> getDetail(String bookdetailUrl) {
         String responseStr = null;
         try {
-            responseStr = HttpUtil.get(bookdetailUrl + sb, null);
+            log.info("detail api호출");
+            responseStr = HttpUtil.get(bookdetailUrl, null);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -75,9 +64,5 @@ public class AladinApiUtil {
             log.error("e: {0}", e);
             throw new RuntimeException(e);
         }
-    }
-
-    public static void main(String[] args) {
-
     }
 }

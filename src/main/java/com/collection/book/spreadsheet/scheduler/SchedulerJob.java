@@ -1,13 +1,14 @@
 package com.collection.book.spreadsheet.scheduler;
 
+import com.collection.book.example.service.AladinService;
 import com.collection.book.spreadsheet.domain.UpdateArea;
 import com.collection.book.spreadsheet.service.GoogleService;
 import com.google.api.services.sheets.v4.model.CellData;
 import com.google.api.services.sheets.v4.model.ExtendedValue;
-import com.google.api.services.sheets.v4.model.Request;
 import com.google.api.services.sheets.v4.model.RowData;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.jsoup.Jsoup;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
@@ -15,11 +16,7 @@ import org.quartz.JobExecutionContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
 import java.util.*;
-
-import static com.collection.book.util.AladinApiUtil.getDetail;
-import static com.collection.book.util.AladinApiUtil.getISBN;
 
 @Slf4j
 @DisallowConcurrentExecution
@@ -42,6 +39,8 @@ public class SchedulerJob implements Job {
     private String ALADIN_TTBKEY;
 
     private final GoogleService googleService;
+    private final AladinService aladinService;
+
 
     private final int MAX_ROW = 1000;
     private final int BATCH_SIZE = 100;
@@ -67,10 +66,10 @@ public class SchedulerJob implements Job {
         }
 
         // 특정 영역을 읽어온다.
-        String colList[] = {"키워드", "도서명"};
+        String colList[] = {"검색어", "검색우선순위", "도서명"};
 
         char startCol = 'A';
-        int colSize = colList.length;
+        int colSize = 2;
 
         for (int startRow = 3; startRow <= MAX_ROW; startRow += BATCH_SIZE) {
             int end = Math.min(startRow + BATCH_SIZE - 1, MAX_ROW);
@@ -78,35 +77,37 @@ public class SchedulerJob implements Job {
             String range = String.format("bookList!%s%d:%s%d", startCol, startRow, (char) (startCol + colSize), end);
             List<List<Object>> lists = googleService.readFromSheet(SPREADSHEET_ID, range);
             if (lists == null || lists.isEmpty()) break;
-
             log.info("lists.size: {}", lists.size());
 
             List<UpdateArea> updateAreaList = new ArrayList<>();
             for (int i = 0; i < lists.size(); i++) {
                 List<Object> list = lists.get(i);
-                log.info("list: {}", list);
+//                log.info("list: {}", list);
 
                 int absoluteRow = startRow + i;
                 if (list.isEmpty()){
                     log.info("빈 레코드");
                     continue;
                 }
-                if (list.size() > 1){
-                    log.info("이미 채워진 레코드");
-                    continue;
-                }
+                if (list.size() == colSize + 1)continue;
 
+                String keword = (String)list.get(0);
+                String sort = (String)list.get(1);
+                if (keword == null || keword.isEmpty()) continue;
 
-                Map<String, String> hm = new HashMap<String, String>();
-                hm.put("ttbkey", ALADIN_TTBKEY);
-                hm.put("QueryType", "Title");
-                hm.put("SearchTarget", "Book");
-                hm.put("Query", (String) list.get(0));
-                hm.put("output", "js");
-                hm.put("start", "1");
-                hm.put("MaxResults", "20");
-                hm.put("Version", "20131101");
-                String isbn = getISBN(hm, BOOKLIST_URL);
+                /*
+                Accuracy(기본값): 관련도
+                PublishTime : 출간일
+                Title : 제목
+                SalesPoint : 판매량
+                CustomerRating 고객평점
+                MyReviewCount :마이리뷰갯수
+                 */
+
+                StringBuffer queryParamIsbn = makeQueryParamIsbn(list, sort);
+
+                String isbn = aladinService.getIsbn(BOOKLIST_URL + queryParamIsbn);
+
                 if (isbn == null || isbn.isBlank()) {
                     log.info("isbn이 비어있음");
                     List<CellData> cellList = new ArrayList<>();
@@ -119,7 +120,7 @@ public class SchedulerJob implements Job {
                             .sheetId(SHEET_ID)
                             .startRowIndex(absoluteRow - 1)
                             .rowSize(1)
-                            .startColumnIndex(1) // 키워드 건너띄고 책제목 컬럼부터
+                            .startColumnIndex(2)
                             .colSize(4)
                             .rowDataList(List.of(rowData))
                             .build();
@@ -130,13 +131,10 @@ public class SchedulerJob implements Job {
                 }
 
                 Map<String, Object> detail = null;
-                hm = new HashMap<String, String>();
-                hm.put("ttbkey", ALADIN_TTBKEY);
-                hm.put("ItemIdType", "ISBN13");
-                hm.put("ItemId", isbn);
-                hm.put("Output", "js");
-                hm.put("OptResult", "ratingInfo,bestSellerRank,previewImgList,authors,fulldescription,Toc,Story,categoryIdList,mdrecommend");
-                detail = getDetail(hm, BOOKDETAIL_URL);
+
+                StringBuffer queryParamDetail = makeQueryParamDetail(isbn);
+
+                detail = aladinService.getDetail(BOOKDETAIL_URL + queryParamDetail);
 
                 if (detail == null) {
                     log.info("detail이 비어있음");
@@ -151,7 +149,7 @@ public class SchedulerJob implements Job {
                             .sheetId(SHEET_ID)
                             .startRowIndex(absoluteRow - 1)
                             .rowSize(1)
-                            .startColumnIndex(1) // 키워드 건너띄고 책제목 컬럼부터
+                            .startColumnIndex(2)
                             .colSize(4)
                             .rowDataList(List.of(rowData))
                             .build();
@@ -176,7 +174,7 @@ public class SchedulerJob implements Job {
                             .sheetId(SHEET_ID)
                             .startRowIndex(absoluteRow - 1)
                             .rowSize(1)
-                            .startColumnIndex(1) // 키워드 건너띄고 책제목 컬럼부터
+                            .startColumnIndex(2)
                             .colSize(4)
                             .rowDataList(List.of(rowData))
                             .build();
@@ -229,7 +227,7 @@ public class SchedulerJob implements Job {
                         .sheetId(SHEET_ID)
                         .startRowIndex(absoluteRow - 1)
                         .rowSize(1)
-                        .startColumnIndex(1) // 키워드 건너띄고 책제목 컬럼부터
+                        .startColumnIndex(2)
                         .colSize(4)
                         .rowDataList(List.of(rowData))
                         .build();
@@ -238,5 +236,39 @@ public class SchedulerJob implements Job {
                 googleService.writeBatchToSheet(SPREADSHEET_ID, updateAreaList);
             }
         }
+    }
+
+    private @NotNull StringBuffer makeQueryParamIsbn(List<Object> list, String sort) {
+        StringBuffer queryParam = new StringBuffer();
+        Map<String, String> hm = new HashMap<String, String>();
+        hm.put("ttbkey", ALADIN_TTBKEY);
+        hm.put("QueryType", "Title");
+        hm.put("SearchTarget", "Book");
+        hm.put("Query", (String) list.get(0));
+        hm.put("output", "js");
+        hm.put("Sort", sort);
+        hm.put("start", "1");
+        hm.put("MaxResults", "20");
+        hm.put("Version", "20131101");
+        for (String key : hm.keySet()) {
+            String val = hm.get(key);
+            queryParam.append(key).append("=").append(val).append("&");
+        }
+        return queryParam;
+    }
+
+    private @NotNull StringBuffer makeQueryParamDetail(String isbn) {
+        StringBuffer queryParam = new StringBuffer();
+        Map<String, String> hm = new HashMap<String, String>();
+        hm.put("ttbkey", ALADIN_TTBKEY);
+        hm.put("ItemIdType", "ISBN13");
+        hm.put("ItemId", isbn);
+        hm.put("Output", "js");
+        hm.put("OptResult", "ratingInfo,bestSellerRank,previewImgList,authors,fulldescription,Toc,Story,categoryIdList,mdrecommend");
+        for (String key : hm.keySet()) {
+            String val = hm.get(key);
+            queryParam.append(key).append("=").append(val).append("&");
+        }
+        return queryParam;
     }
 }

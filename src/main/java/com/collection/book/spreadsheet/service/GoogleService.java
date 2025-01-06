@@ -53,7 +53,7 @@ public class GoogleService {
                     .update(spreadSheetId, range, body)
                     .setValueInputOption("USER_ENTERED")
                     .execute();
-            log.info("Updated rows: {}", result.getUpdatedRows());
+//            log.info("Updated rows: {}", result.getUpdatedRows());
             Thread.sleep(1000);
         } catch (Exception e) {
             log.error("Failed to write data to the spreadsheet", e);

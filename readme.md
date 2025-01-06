@@ -11,8 +11,9 @@
 
 # 서버실행 명령어
 ```bash
-nohup java -jar your-application.jar --server.port=8080 > /dev/null 2>&1 &
+nohup java -jar book-collection-0.0.1-SNAPSHOT.jar > /dev/null 2>&1 &
 
 netstat -tulnp | grep 8080
 lsof -i:8080
+kill -9 {pid}
 ```
