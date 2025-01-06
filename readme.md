@@ -5,6 +5,10 @@
 -  책 마다 커버하는 기술들이 모두 다르다.
 - 책들 간의 커버하는 기술의 공통점, 차이점을 볼 수 있게 만든다.
 
+
+
+[서비스링크](https://docs.google.com/spreadsheets/d/1sGkBKUzV3Of8K787DeHcUaGrbDe_9U67o7FIlnkLdSk/edit?gid=0#gid=0)
+
 ![Animation](https://github.com/user-attachments/assets/0030a15c-2196-4fa6-96d9-02033c85f84a)
 
 # 추후 개발할 것들
