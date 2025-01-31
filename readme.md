@@ -1,7 +1,8 @@
-# 서비스 목표
-- 구글SpreadSheet에 아래 정보를 입력한다.
-  - 책 제목
-- 책 정보를 조회해 온다.
+# 서비스 개요
+1. 구글SpreadSheet에 정보를 입력.
+  - 책 제목, 검색기준
+2. 책 정보를 서비스가 조회하여 구글SpreadSheet에 기록한다
+  - 도서명, 저자, 목차, 출판일
 
 <a href="https://docs.google.com/spreadsheets/d/1sGkBKUzV3Of8K787DeHcUaGrbDe_9U67o7FIlnkLdSk/edit?gid=0#gid=0" target="_blank">책정보 조회서비스로 이동</a>
 
